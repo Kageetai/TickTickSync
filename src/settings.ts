@@ -4,6 +4,37 @@ import type { IProjectGroup } from '@/api/types/ProjectGroup';
 import type { FileMetadata } from '@/services/cacheOperation';
 import { settingsStore } from '@/ui/settings/settingsstore';
 
+// TaskNotes field mapping configuration
+export interface ITaskNotesFieldMapping {
+	status: string;
+	priority: string;
+	due: string;
+	scheduled: string;
+	project: string;
+	contexts: string;
+}
+
+// TaskNotes status value mapping
+export interface ITaskNotesStatusValues {
+	open: string;
+	done: string;
+}
+
+// TaskNotes priority value mapping
+export interface ITaskNotesPriorityValues {
+	none: string;
+	low: string;
+	normal: string;
+	high: string;
+}
+
+// TaskNotes file index entry
+export interface ITaskFileIndexEntry {
+	tickTickId: string;
+	filePath: string;
+	lastModified: number;
+}
+
 export interface ITickTickSyncSettings {
 
 	baseURL: string;
@@ -34,6 +65,16 @@ export interface ITickTickSyncSettings {
 	inboxName: string;
 	checkPoint: number;
 
+	// TaskNotes Integration Settings
+	enableTaskNotes: boolean;              // Create task files alongside inline tasks
+	taskNotesFolder: string;               // Folder for task files (default: "TaskNotes/Tasks")
+	taskNotesFileNameTemplate: string;     // File naming template (default: "{title}")
+	taskNotesTagValue: string;             // Tag added to task frontmatter (default: "task")
+	linkInlineToTaskFile: boolean;         // Wrap inline task title in [[wikilink]]
+	taskNotesFieldMapping: ITaskNotesFieldMapping;
+	taskNotesStatusValues: ITaskNotesStatusValues;
+	taskNotesPriorityValues: ITaskNotesPriorityValues;
+	taskFileIndex: Record<string, ITaskFileIndexEntry>; // tickTickId -> file info
 
 	fileMetadata: FileMetadata;
 	TickTickTasksData: {
@@ -67,6 +108,32 @@ export const DEFAULT_SETTINGS: ITickTickSyncSettings = {
 	inboxName: 'Inbox',
 	checkPoint: 0,
 	skipBackup: false,
+
+	// TaskNotes Integration Defaults
+	enableTaskNotes: false,
+	taskNotesFolder: 'TaskNotes/Tasks',
+	taskNotesFileNameTemplate: '{title}',
+	taskNotesTagValue: 'task',
+	linkInlineToTaskFile: true,
+	taskNotesFieldMapping: {
+		status: 'status',
+		priority: 'priority',
+		due: 'due',
+		scheduled: 'scheduled',
+		project: 'project',
+		contexts: 'contexts'
+	},
+	taskNotesStatusValues: {
+		open: 'open',
+		done: 'done'
+	},
+	taskNotesPriorityValues: {
+		none: 'none',
+		low: 'low',
+		normal: 'normal',
+		high: 'high'
+	},
+	taskFileIndex: {},
 
 	fileMetadata: {},
 	TickTickTasksData: {

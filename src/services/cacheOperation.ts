@@ -3,7 +3,7 @@ import TickTickSync from '@/main';
 import type { ITask } from '@/api/types/Task';
 import type { IProject } from '@/api/types//Project';
 import { FoundDuplicatesModal } from '@/modals/FoundDuplicatesModal';
-import { getProjects, getSettings, getTasks, updateProjects, updateSettings, updateTasks, getDefaultFolder } from '@/settings';
+import { getProjects, getSettings, getTasks, updateProjects, updateSettings, updateTasks, getDefaultFolder, type ITaskFileIndexEntry } from '@/settings';
 //Logging
 import log from '@/utils/logger';
 import { FileMap } from '@/services/fileMap';
@@ -804,5 +804,79 @@ export class CacheOperation {
 				}
 			}
 		}
+	}
+
+	// ==================== TaskNotes File Index Methods ====================
+
+	/**
+	 * Get the task file index
+	 */
+	getTaskFileIndex(): Record<string, ITaskFileIndexEntry> {
+		return getSettings().taskFileIndex || {};
+	}
+
+	/**
+	 * Get task file path from index by TickTick ID
+	 */
+	getTaskFilePathFromIndex(tickTickId: string): string | null {
+		const index = this.getTaskFileIndex();
+		return index[tickTickId]?.filePath || null;
+	}
+
+	/**
+	 * Get TickTick ID for a file path from the index
+	 */
+	getTickTickIdFromFilePath(filePath: string): string | null {
+		const index = this.getTaskFileIndex();
+		for (const [tickTickId, entry] of Object.entries(index)) {
+			if (entry.filePath === filePath) {
+				return tickTickId;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Update task file index entry
+	 */
+	updateTaskFileIndex(tickTickId: string, filePath: string): void {
+		const index = { ...this.getTaskFileIndex() };
+		index[tickTickId] = {
+			tickTickId,
+			filePath,
+			lastModified: Date.now()
+		};
+		updateSettings({ taskFileIndex: index });
+	}
+
+	/**
+	 * Remove task from file index
+	 */
+	removeFromTaskFileIndex(tickTickId: string): void {
+		const index = { ...this.getTaskFileIndex() };
+		delete index[tickTickId];
+		updateSettings({ taskFileIndex: index });
+	}
+
+	/**
+	 * Check if a task has an associated task file
+	 */
+	hasTaskFile(tickTickId: string): boolean {
+		const index = this.getTaskFileIndex();
+		return tickTickId in index;
+	}
+
+	/**
+	 * Get all TickTick IDs that have task files
+	 */
+	getAllTaskFileIds(): string[] {
+		return Object.keys(this.getTaskFileIndex());
+	}
+
+	/**
+	 * Clear the entire task file index
+	 */
+	clearTaskFileIndex(): void {
+		updateSettings({ taskFileIndex: {} });
 	}
 }

@@ -15,6 +15,7 @@ import type { TaskDetail } from '@/services/cacheOperation';
 import { TaskDeletionModal } from '@/modals/TaskDeletionModal';
 import { getSettings, updateProjectGroups } from '@/settings';
 import { FileMap, type ITaskItemRecord } from '@/services/fileMap';
+import type { TaskFileManager } from '@/services/taskFileManager';
 import log from 'loglevel';
 
 type deletedTask = {
@@ -1069,6 +1070,9 @@ export class SyncMan {
 					await new Promise(resolve => setTimeout(resolve, 1000));
 				}
 				bModifiedFileSystem = true;
+
+				// Create TaskNotes-compatible task files for new tasks
+				await this.syncTaskFilesForTasks(newTickTickTasks, 'create');
 			}
 
 
@@ -1110,7 +1114,8 @@ export class SyncMan {
 							log.debug('Task deletion failed.', error);
 							bModifiedFileSystem = true;
 						}
-
+						// Delete TaskNotes-compatible task file
+						await this.deleteTaskFile(task.id);
 					}
 
 				}
@@ -1173,6 +1178,8 @@ export class SyncMan {
 					bModifiedFileSystem = true;
 				}
 
+				// Update TaskNotes-compatible task files for updated tasks
+				await this.syncTaskFilesForTasks(recentUpdates, 'update');
 
 				await this.plugin.saveSettings();
 				//If we just farckled the file system, stop Syncing to avoid race conditions.
@@ -1478,5 +1485,73 @@ export class SyncMan {
 			}
 		}
 		return null; // Return null if no task or item is found for the given line number
+	}
+
+	// ---- TaskNotes Integration Methods ----
+
+	/**
+	 * Get the TaskFileManager from the service
+	 */
+	private getTaskFileManager(): TaskFileManager | undefined {
+		return this.plugin.service?.taskFileManager;
+	}
+
+	/**
+	 * Sync task files for a list of tasks (create or update)
+	 */
+	private async syncTaskFilesForTasks(tasks: ITask[], action: 'create' | 'update'): Promise<void> {
+		const settings = getSettings();
+		if (!settings.enableTaskNotes) {
+			return;
+		}
+
+		const taskFileManager = this.getTaskFileManager();
+		if (!taskFileManager) {
+			log.warn('TaskFileManager not initialized, skipping task file sync');
+			return;
+		}
+
+		for (const task of tasks) {
+			try {
+				if (action === 'create') {
+					await taskFileManager.createTaskFile(task);
+					log.debug(`Created task file for: ${task.title}`);
+				} else if (action === 'update') {
+					const existingFile = await taskFileManager.findTaskFileById(task.id);
+					if (existingFile) {
+						await taskFileManager.updateTaskFile(task, existingFile);
+						log.debug(`Updated task file for: ${task.title}`);
+					} else {
+						// Task file doesn't exist yet, create it
+						await taskFileManager.createTaskFile(task);
+						log.debug(`Created task file (was missing) for: ${task.title}`);
+					}
+				}
+			} catch (error) {
+				log.error(`Failed to ${action} task file for ${task.id}:`, error);
+			}
+		}
+	}
+
+	/**
+	 * Delete task file for a task
+	 */
+	private async deleteTaskFile(taskId: string): Promise<void> {
+		const settings = getSettings();
+		if (!settings.enableTaskNotes) {
+			return;
+		}
+
+		const taskFileManager = this.getTaskFileManager();
+		if (!taskFileManager) {
+			return;
+		}
+
+		try {
+			await taskFileManager.deleteTaskFile(taskId);
+			log.debug(`Deleted task file for task: ${taskId}`);
+		} catch (error) {
+			log.error(`Failed to delete task file for ${taskId}:`, error);
+		}
 	}
 }

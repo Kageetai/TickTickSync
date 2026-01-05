@@ -7,6 +7,7 @@ import { Editor, type MarkdownFileInfo, type MarkdownView, Notice, TFile } from 
 import { CacheOperation } from '@/services/cacheOperation';
 import { FileOperation } from '@/fileOperation';
 import { FileMap } from '@/services/fileMap';
+import { TaskFileManager } from '@/services/taskFileManager';
 //Logging
 import log from '@/utils/logger';
 import { getTick } from '@/api/tick_singleton_factory'
@@ -22,6 +23,7 @@ export class TickTickService {
 	api?: Tick;
 	cacheOperation!: CacheOperation;
 	fileOperation?: FileOperation;
+	taskFileManager?: TaskFileManager;
 
 	constructor(plugin: TickTickSync) {
 		this.plugin = plugin;
@@ -48,6 +50,8 @@ export class TickTickService {
 			this.cacheOperation = new CacheOperation(this.plugin.app, this.plugin);
 			//initialize file operation
 			this.fileOperation = new FileOperation(this.plugin.app, this.plugin);
+			//initialize task file manager for TaskNotes integration
+			this.taskFileManager = new TaskFileManager(this.plugin.app, this.plugin);
 			this.tickTickSync = new SyncMan(this.plugin.app, this.plugin);
 			this.initialized = true;
 			return true;

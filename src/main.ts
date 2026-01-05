@@ -443,6 +443,42 @@ export default class TickTickSync extends Plugin {
 			}
 		});
 
+		// TaskNotes commands
+		this.addCommand({
+			id: 'tts-open-task-file',
+			name: 'Open task file for task under cursor',
+			editorCallback: async (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
+				if (!getSettings().enableTaskNotes) {
+					new Notice('TaskNotes feature is not enabled. Enable it in settings.');
+					return;
+				}
+				await this.openTaskFileForCurrentTask(editor, view);
+			}
+		});
+
+		this.addCommand({
+			id: 'tts-create-task-files',
+			name: 'Create task files for all existing tasks',
+			callback: async () => {
+				if (!getSettings().enableTaskNotes) {
+					new Notice('TaskNotes feature is not enabled. Enable it in settings.');
+					return;
+				}
+				await this.createTaskFilesForAllTasks();
+			}
+		});
+
+		this.addCommand({
+			id: 'tts-sync-task-file',
+			name: 'Sync current task file to TickTick',
+			callback: async () => {
+				if (!getSettings().enableTaskNotes) {
+					new Notice('TaskNotes feature is not enabled. Enable it in settings.');
+					return;
+				}
+				await this.syncCurrentTaskFile();
+			}
+		});
 
 		//display default project for the current file on status bar
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
@@ -452,6 +488,127 @@ export default class TickTickSync extends Plugin {
 	private async synchronizeNow() {
 		await this.scheduledSynchronization();
 		new Notice(`Sync completed..`);
+	}
+
+	/**
+	 * Open the task file for the task under cursor
+	 */
+	private async openTaskFileForCurrentTask(editor: Editor, view: MarkdownView | MarkdownFileInfo) {
+		const cursor = editor.getCursor();
+		const line = editor.getLine(cursor.line);
+
+		// Extract task ID from the line using the pattern %%[ticktick_id:: <id>]%%
+		const idMatch = line.match(/\[ticktick_id::\s*([a-f0-9]+)\]/);
+		if (!idMatch) {
+			new Notice('No task found on current line. Place cursor on a line with a TickTick task.');
+			return;
+		}
+
+		const tickTickId = idMatch[1];
+		const taskFileManager = this.service?.taskFileManager;
+		if (!taskFileManager) {
+			new Notice('TaskNotes feature is not initialized.');
+			return;
+		}
+
+		const taskFile = await taskFileManager.findTaskFileById(tickTickId);
+		if (taskFile) {
+			// Open the existing file
+			await this.app.workspace.openLinkText(taskFile.path, '', false);
+		} else {
+			// Task file doesn't exist, offer to create it
+			const task = this.cacheOperation?.loadTaskFromCacheID(tickTickId);
+			if (task) {
+				const file = await taskFileManager.createTaskFile(task);
+				if (file) {
+					await this.app.workspace.openLinkText(file.path, '', false);
+					new Notice(`Created and opened task file: ${file.name}`);
+				}
+			} else {
+				new Notice(`Task ${tickTickId} not found in cache. Try syncing first.`);
+			}
+		}
+	}
+
+	/**
+	 * Create task files for all existing tasks in cache
+	 */
+	private async createTaskFilesForAllTasks() {
+		const taskFileManager = this.service?.taskFileManager;
+		if (!taskFileManager) {
+			new Notice('TaskNotes feature is not initialized.');
+			return;
+		}
+
+		const tasks = this.cacheOperation?.loadTasksFromCache();
+		if (!tasks || tasks.length === 0) {
+			new Notice('No tasks found in cache. Try syncing first.');
+			return;
+		}
+
+		let created = 0;
+		let skipped = 0;
+
+		new Notice(`Creating task files for ${tasks.length} tasks...`);
+
+		for (const task of tasks) {
+			// Check if file already exists
+			const exists = await taskFileManager.taskFileExists(task.id);
+			if (exists) {
+				skipped++;
+				continue;
+			}
+
+			const file = await taskFileManager.createTaskFile(task);
+			if (file) {
+				created++;
+			}
+		}
+
+		new Notice(`Created ${created} task files. ${skipped} already existed.`);
+	}
+
+	/**
+	 * Force sync the currently open task file to TickTick
+	 */
+	private async syncCurrentTaskFile() {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile) {
+			new Notice('No file is currently open.');
+			return;
+		}
+
+		const taskFileManager = this.service?.taskFileManager;
+		if (!taskFileManager) {
+			new Notice('TaskNotes feature is not initialized.');
+			return;
+		}
+
+		// Check if this is a task file
+		if (!taskFileManager.isTaskNoteFile(activeFile.path)) {
+			new Notice('Current file is not in the TaskNotes folder.');
+			return;
+		}
+
+		// Get the TickTick ID from the file
+		const tickTickId = await taskFileManager.getTickTickIdFromFile(activeFile);
+		if (!tickTickId) {
+			new Notice('This file does not have a ticktick_id. It may not be a task file.');
+			return;
+		}
+
+		// Force sync by triggering the sync method
+		try {
+			const result = await this.service?.tickTickSync?.syncTaskFileChangesToTickTick();
+			if (result) {
+				new Notice(`Task file synced to TickTick.`);
+			} else {
+				new Notice(`No changes to sync.`);
+			}
+		} catch (error) {
+			log.error('Error syncing task file:', error);
+			new Notice(`Failed to sync task file: ${error}`);
+		}
 	}
 
 	private registerEvents() {

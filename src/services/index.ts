@@ -167,7 +167,16 @@ export class TickTickService {
 
 	async renamedFileCheck(filePath: string, oldPath: string): Promise<boolean> {
 		// log.debug(`${oldPath} is renamed`)
-		//Read fileMetadata
+
+		// First check if this is a TaskNotes file rename
+		if (this.taskFileManager?.isTaskNoteFile(oldPath)) {
+			await doWithLock(LOCK_TASKS, async () => {
+				await this.taskFileManager?.handleTaskFileRename(oldPath, filePath);
+			});
+			return true;
+		}
+
+		//Read fileMetadata for inline task files
 		//const fileMetadata = await this.fileOperation.getFileMetadata(file)
 		const fileMetadata = await this.cacheOperation?.getFileMetadata(oldPath, null);
 		if (!fileMetadata || !fileMetadata.TickTickTasks) {

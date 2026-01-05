@@ -264,6 +264,45 @@ export class TaskFileManager {
 		return file !== null;
 	}
 
+	/**
+	 * Handle task file rename - update the index with the new path
+	 */
+	async handleTaskFileRename(oldPath: string, newPath: string): Promise<boolean> {
+		const settings = getSettings();
+		if (!settings.enableTaskNotes) {
+			return false;
+		}
+
+		// Check if the old path was in the task notes folder
+		if (!oldPath.startsWith(settings.taskNotesFolder)) {
+			return false;
+		}
+
+		// Find the TickTick ID from the new file location
+		const file = this.app.vault.getAbstractFileByPath(newPath);
+		if (!(file instanceof TFile)) {
+			return false;
+		}
+
+		const tickTickId = await this.getTickTickIdFromFile(file);
+		if (!tickTickId) {
+			return false;
+		}
+
+		// Update the index with the new path
+		this.updateFileIndex(tickTickId, newPath);
+		log.debug(`Updated task file index: ${oldPath} -> ${newPath} (${tickTickId})`);
+		return true;
+	}
+
+	/**
+	 * Check if a file path is in the task notes folder
+	 */
+	isTaskNoteFile(filePath: string): boolean {
+		const settings = getSettings();
+		return settings.enableTaskNotes && filePath.startsWith(settings.taskNotesFolder);
+	}
+
 	// ---- Private helper methods ----
 
 	/**

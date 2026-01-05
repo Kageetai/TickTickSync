@@ -8,6 +8,7 @@
 	import NotesSettings from './NotesSettings.svelte';
 	import SyncControlSettings from './sections/SyncControlSettings.svelte';
 	import TasksSettings from './TasksSettings.svelte';
+	import TaskNotesSettings from './TaskNotesSettings.svelte';
 	import { getSettings } from '@/settings';
 
 
@@ -26,6 +27,7 @@
 		debug: 'Debug Options',
 		tasks: 'Task Links',
 		notes: 'Notes',
+		tasknotes: 'TaskNotes',
 	};
 </script>
 <div class="ticktick-settings">
@@ -57,6 +59,8 @@
 			<NotesSettings {plugin} />
 		{:else if activeTab === 'tasks'}
 			<TasksSettings {plugin} />
+		{:else if activeTab === 'tasknotes'}
+			<TaskNotesSettings {plugin} />
 		{/if}
 	</div>
 </div>

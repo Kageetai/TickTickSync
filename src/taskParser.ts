@@ -155,7 +155,19 @@ export class TaskParser {
 
 		task.title = this.stripOBSUrl(task.title);
 
-		resultLine += `- [${task.status > 0 ? 'x' : ' '}] ${task.title}`;
+		// Get display title - optionally wrap in wikilink for TaskNotes integration
+		let displayTitle = task.title;
+		const settings = getSettings();
+		if (settings.enableTaskNotes && settings.linkInlineToTaskFile) {
+			// Generate wikilink to task file
+			const converter = this.plugin.service?.taskFileManager?.converter;
+			if (converter) {
+				const wikilink = converter.generateWikilink(task);
+				displayTitle = wikilink;
+			}
+		}
+
+		resultLine += `- [${task.status > 0 ? 'x' : ' '}] ${displayTitle}`;
 
 
 		//add Tags
@@ -229,7 +241,21 @@ export class TaskParser {
 
 		taskContent = this.stripOBSUrl(taskContent);
 		taskContent = this.plugin.dateMan?.stripDatesFromLine(taskContent);
+		// Strip wikilink brackets from TaskNotes integration
+		taskContent = this.stripWikilink(taskContent);
 		return (taskContent);
+	}
+
+	/**
+	 * Strip wikilink brackets from a string: [[title]] → title
+	 * Also handles aliased wikilinks: [[file|display]] → display
+	 */
+	stripWikilink(text: string): string {
+		if (!text) return text;
+		// Match [[content]] or [[content|alias]] and extract the display text
+		return text.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, content, alias) => {
+			return alias || content;
+		});
 	}
 
 	stripLineItemId(lineText: string) {

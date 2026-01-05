@@ -112,6 +112,11 @@ export class TickTickService {
 				return;
 			}
 			await this.syncFiles(false);
+
+			// Sync task file changes back to TickTick (TaskNotes → TickTick direction)
+			await doWithLock(LOCK_TASKS, async () => {
+				await this.tickTickSync?.syncTaskFileChangesToTickTick();
+			});
 		} catch (error) {
 			log.error('Error on synchronization: ', error);
 		}

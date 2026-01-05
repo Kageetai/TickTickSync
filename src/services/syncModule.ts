@@ -1554,4 +1554,196 @@ export class SyncMan {
 			log.error(`Failed to delete task file for ${taskId}:`, error);
 		}
 	}
+
+	/**
+	 * Sync changes from TaskNotes files back to TickTick
+	 * This handles the Files → TickTick direction of bidirectional sync
+	 */
+	async syncTaskFileChangesToTickTick(): Promise<boolean> {
+		const settings = getSettings();
+		if (!settings.enableTaskNotes) {
+			return false;
+		}
+
+		const taskFileManager = this.getTaskFileManager();
+		if (!taskFileManager) {
+			log.warn('TaskFileManager not initialized, skipping task file sync');
+			return false;
+		}
+
+		let hasChanges = false;
+
+		try {
+			// Get all task files in the TaskNotes folder
+			const taskFiles = await taskFileManager.getAllTaskFiles();
+
+			for (const file of taskFiles) {
+				try {
+					// Get the TickTick ID from the file
+					const tickTickId = await taskFileManager.getTickTickIdFromFile(file);
+					if (!tickTickId) {
+						continue; // Skip files without ticktick_id
+					}
+
+					// Get the cached task
+					const cachedTask = this.plugin.cacheOperation?.loadTaskFromCacheID(tickTickId);
+					if (!cachedTask) {
+						log.debug(`Task ${tickTickId} not found in cache, skipping file sync`);
+						continue;
+					}
+
+					// Check if the file was modified after the cached task
+					const fileModTime = file.stat.mtime;
+					const cachedModTime = cachedTask.modifiedTime ? new Date(cachedTask.modifiedTime).getTime() : 0;
+
+					// Also check the task file index for last sync time
+					const indexEntry = settings.taskFileIndex[tickTickId];
+					const lastSyncTime = indexEntry?.lastModified || 0;
+
+					// Only sync if file was modified after both cached task and last sync
+					if (fileModTime <= lastSyncTime) {
+						continue; // File hasn't changed since last sync
+					}
+
+					// Parse the task file to get updated data
+					const taskNoteData = await taskFileManager.readTaskFile(file);
+					const updatedTaskData = taskFileManager.converter.extractTaskData(taskNoteData);
+
+					// Check if there are actual changes
+					if (!this.hasTaskFileChanges(cachedTask, updatedTaskData)) {
+						// Update the index timestamp even if no changes
+						this.plugin.cacheOperation?.updateTaskFileIndex(tickTickId, file.path);
+						continue;
+					}
+
+					log.debug(`Task file modified for ${tickTickId}: ${file.path}`);
+
+					// Merge the changes with the cached task
+					const taskToUpdate: ITask = {
+						...cachedTask,
+						title: updatedTaskData.title || cachedTask.title,
+						status: updatedTaskData.status !== undefined ? updatedTaskData.status : cachedTask.status,
+						priority: updatedTaskData.priority !== undefined ? updatedTaskData.priority : cachedTask.priority,
+						dueDate: updatedTaskData.dueDate || cachedTask.dueDate,
+						startDate: updatedTaskData.startDate || cachedTask.startDate,
+						tags: updatedTaskData.tags || cachedTask.tags,
+						content: updatedTaskData.content || cachedTask.content,
+						items: updatedTaskData.items || cachedTask.items,
+						modifiedTime: this.plugin.dateMan?.formatDateToISO(new Date()) || ''
+					};
+
+					// Update TickTick
+					const result = await this.plugin.tickTickRestAPI?.UpdateTask(taskToUpdate);
+					if (result) {
+						// Update the cache
+						await this.plugin.cacheOperation?.updateTaskToCache(result, null);
+
+						// Update the inline task in the vault file
+						await this.updateInlineTaskFromTaskFile(tickTickId, result);
+
+						// Update the task file index
+						this.plugin.cacheOperation?.updateTaskFileIndex(tickTickId, file.path);
+
+						new Notice(`Task "${taskToUpdate.title}" synced from task file`);
+						log.debug(`Synced task file changes for ${tickTickId} to TickTick`);
+						hasChanges = true;
+					}
+				} catch (error) {
+					log.error(`Error syncing task file ${file.path}:`, error);
+				}
+			}
+
+			if (hasChanges) {
+				await this.plugin.saveSettings();
+			}
+		} catch (error) {
+			log.error('Error in syncTaskFileChangesToTickTick:', error);
+		}
+
+		return hasChanges;
+	}
+
+	/**
+	 * Check if there are meaningful changes between cached task and task file data
+	 */
+	private hasTaskFileChanges(cachedTask: ITask, taskFileData: Partial<ITask>): boolean {
+		// Compare key fields
+		if (taskFileData.title && taskFileData.title !== cachedTask.title) return true;
+		if (taskFileData.status !== undefined && taskFileData.status !== cachedTask.status) return true;
+		if (taskFileData.priority !== undefined && taskFileData.priority !== cachedTask.priority) return true;
+		if (taskFileData.dueDate && taskFileData.dueDate !== cachedTask.dueDate) return true;
+		if (taskFileData.startDate && taskFileData.startDate !== cachedTask.startDate) return true;
+
+		// Compare tags
+		if (taskFileData.tags && JSON.stringify(taskFileData.tags.sort()) !== JSON.stringify((cachedTask.tags || []).sort())) {
+			return true;
+		}
+
+		// Compare items (checklist)
+		if (taskFileData.items && taskFileData.items.length > 0) {
+			if (!cachedTask.items || cachedTask.items.length !== taskFileData.items.length) {
+				return true;
+			}
+			for (let i = 0; i < taskFileData.items.length; i++) {
+				const fileItem = taskFileData.items[i];
+				const cachedItem = cachedTask.items.find(item => item.id === fileItem.id);
+				if (!cachedItem || cachedItem.status !== fileItem.status || cachedItem.title !== fileItem.title) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Update the inline task line when task file changes
+	 */
+	private async updateInlineTaskFromTaskFile(tickTickId: string, task: ITask): Promise<void> {
+		try {
+			// Find the file containing this task
+			const filePath = this.plugin.cacheOperation?.getFilepathForTask(tickTickId);
+			if (!filePath) {
+				log.debug(`No inline task file found for ${tickTickId}`);
+				return;
+			}
+
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (!(file instanceof TFile)) {
+				return;
+			}
+
+			// Read the file content
+			const content = await this.app.vault.read(file);
+			const lines = content.split('\n');
+
+			// Find the line with this task ID
+			const taskIdPattern = new RegExp(`%%\\[ticktick_id:: ${tickTickId}\\]%%`);
+			let lineIndex = -1;
+			for (let i = 0; i < lines.length; i++) {
+				if (taskIdPattern.test(lines[i])) {
+					lineIndex = i;
+					break;
+				}
+			}
+
+			if (lineIndex === -1) {
+				log.debug(`Could not find inline task line for ${tickTickId}`);
+				return;
+			}
+
+			// Get the indentation level
+			const numTabs = this.plugin.taskParser?.getNumTabs(lines[lineIndex]) || 0;
+
+			// Convert the updated task to a line
+			const newLine = await this.plugin.taskParser?.convertTaskToLine(task, numTabs);
+			if (newLine) {
+				lines[lineIndex] = newLine;
+				await this.app.vault.modify(file, lines.join('\n'));
+				log.debug(`Updated inline task for ${tickTickId} from task file`);
+			}
+		} catch (error) {
+			log.error(`Error updating inline task from task file for ${tickTickId}:`, error);
+		}
+	}
 }

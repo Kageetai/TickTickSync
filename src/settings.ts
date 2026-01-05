@@ -4,34 +4,61 @@ import type { IProjectGroup } from '@/api/types/ProjectGroup';
 import type { FileMetadata } from '@/services/cacheOperation';
 import { settingsStore } from '@/ui/settings/settingsstore';
 
-// TaskNotes field mapping configuration
+/**
+ * TaskNotes field mapping configuration.
+ * Maps TickTick task properties to custom frontmatter field names.
+ */
 export interface ITaskNotesFieldMapping {
+	/** Frontmatter field for task status (default: "status") */
 	status: string;
+	/** Frontmatter field for task priority (default: "priority") */
 	priority: string;
+	/** Frontmatter field for due date (default: "due") */
 	due: string;
+	/** Frontmatter field for scheduled/start date (default: "scheduled") */
 	scheduled: string;
+	/** Frontmatter field for project name (default: "project") */
 	project: string;
+	/** Frontmatter field for tags/contexts (default: "contexts") */
 	contexts: string;
 }
 
-// TaskNotes status value mapping
+/**
+ * TaskNotes status value mapping.
+ * Maps TickTick status (0=open, 2=done) to custom string values.
+ */
 export interface ITaskNotesStatusValues {
+	/** Value for open/incomplete tasks (default: "open") */
 	open: string;
+	/** Value for completed tasks (default: "done") */
 	done: string;
 }
 
-// TaskNotes priority value mapping
+/**
+ * TaskNotes priority value mapping.
+ * Maps TickTick priority (0, 1, 3, 5) to custom string values.
+ */
 export interface ITaskNotesPriorityValues {
+	/** Value for no priority - TickTick 0 (default: "none") */
 	none: string;
+	/** Value for low priority - TickTick 1 (default: "low") */
 	low: string;
+	/** Value for normal/medium priority - TickTick 3 (default: "normal") */
 	normal: string;
+	/** Value for high priority - TickTick 5 (default: "high") */
 	high: string;
 }
 
-// TaskNotes file index entry
+/**
+ * Index entry tracking a task file's location.
+ * Used for efficient lookup of task files by TickTick ID.
+ */
 export interface ITaskFileIndexEntry {
+	/** The TickTick task ID */
 	tickTickId: string;
+	/** Path to the task file in the vault */
 	filePath: string;
+	/** Timestamp of last modification */
 	lastModified: number;
 }
 

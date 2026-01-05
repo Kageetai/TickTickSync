@@ -9,8 +9,62 @@ The plugin works best when the [Tasks](https://github.com/obsidian-tasks-group/o
 ## Features
 
 - Bidirectional synchronization of Tasks and Notes.
-- Date/Time compatibility with the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin.   
+- Date/Time compatibility with the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin.
 - Mobile Compatible.
+- **TaskNotes Integration** - Create dedicated markdown files for each task with YAML frontmatter.
+
+## TaskNotes Integration
+
+TaskNotes integration creates a dedicated markdown file for each synced task. This works alongside the existing inline task format, giving you the best of both worlds.
+
+### How It Works
+
+When enabled, each task synced from TickTick gets:
+1. **Inline task** (existing behavior) - A task line in your notes like `- [ ] Task #ticktick %%[ticktick_id:: abc123]%%`
+2. **Task file** (new) - A dedicated markdown file in your TaskNotes folder with YAML frontmatter
+
+Task files are compatible with the [TaskNotes](https://github.com/obsidian-tasks-group/obsidian-tasks) format and include properties like status, priority, due date, and project.
+
+### Example Task File
+
+```markdown
+---
+ticktick_id: abc123def456789012345678
+status: open
+priority: high
+due: 2024-01-15
+project: Work
+tags:
+  - task
+---
+
+# Buy groceries
+
+Task description and any notes you want to add here.
+```
+
+### Settings
+
+Enable TaskNotes in Settings → TickTickSync → TaskNotes:
+
+- **Enable TaskNotes** - Toggle the feature on/off
+- **Task Notes Folder** - Where task files are created (default: `TaskNotes/Tasks`)
+- **Link inline tasks to task files** - Wrap task titles in `[[wikilinks]]` pointing to task files
+- **Task Tag** - Tag added to task files (default: `task`)
+- **Field Mapping** - Customize frontmatter field names to match your setup
+- **Status/Priority Values** - Customize values used in frontmatter
+
+### Commands
+
+- **Open task file for task under cursor** - Opens (or creates) the task file for the task on your current line
+- **Create task files for all existing tasks** - Batch creates task files for all synced tasks
+- **Sync current task file to TickTick** - Syncs changes from the current task file back to TickTick
+
+### Bidirectional Sync
+
+Changes flow both ways:
+- **TickTick → Obsidian**: Task updates from TickTick update both inline tasks and task files
+- **Task Files → TickTick**: Editing frontmatter in task files syncs back to TickTick
 
 ## Documentation
 

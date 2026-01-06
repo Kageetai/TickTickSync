@@ -165,6 +165,7 @@ export const DEFAULT_SETTINGS: ITickTickSyncSettings = {
 	fileMetadata: {},
 	TickTickTasksData: {
 		projects: [],
+		projectGroups: [],
 		tasks: []
 	}
 

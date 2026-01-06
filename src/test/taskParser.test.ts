@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, test } from 'vitest';
 //TODO: task parser tests are failing because it imports obsidian, which is not available in vitest
 import { REGEX, TaskParser } from '../taskParser';
 import { FileMap } from '@/services/fileMap';

@@ -406,7 +406,7 @@ export class TaskNotesConverter {
 		const result: Record<string, unknown> = {};
 		const lines = yaml.split('\n');
 		let currentKey: string | null = null;
-		let currentArray: string[] | null = null;
+		let currentArray: unknown[] | null = null;
 
 		for (const line of lines) {
 			// Check for array item

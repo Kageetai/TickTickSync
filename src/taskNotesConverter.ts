@@ -92,13 +92,12 @@ export class TaskNotesConverter {
 		// Build body content
 		let body = '';
 
-		// Add description/content
-		const description = task.desc || task.content || '';
-		if (description) {
-			// Clean up the description (remove Obsidian URLs that we added)
-			const cleanDescription = this.cleanDescriptionForTaskNote(description);
-			if (cleanDescription) {
-				body += cleanDescription + '\n';
+		// Add notes (task.desc is the TickTick "description", task.content is legacy)
+		const notesContent = task.desc || task.content || '';
+		if (notesContent.length > 0) {
+			const cleanNotes = this.cleanDescriptionForTaskNote(notesContent);
+			if (cleanNotes) {
+				body += '## Notes\n' + cleanNotes + '\n';
 			}
 		}
 
@@ -201,8 +200,11 @@ export class TaskNotesConverter {
 		// Extract checklist items from body
 		task.items = this.extractChecklistItems(taskNoteData.body);
 
-		// Extract description (body content excluding checklist)
-		task.content = this.extractDescriptionFromBody(taskNoteData.body);
+		// Extract notes from body (stored in task.desc for TickTick)
+		const notes = this.extractNotesFromBody(taskNoteData.body);
+		if (notes) {
+			task.desc = notes;
+		}
 
 		return task;
 	}
@@ -491,16 +493,28 @@ export class TaskNotesConverter {
 		return items;
 	}
 
-	private extractDescriptionFromBody(body: string): string {
-		// Remove checklist section
-		let description = body.replace(/## Checklist[\s\S]*?(?=\n---|\n##|$)/i, '');
-
-		// Remove user content section
-		const separatorIndex = description.indexOf('\n---\n');
+	private extractNotesFromBody(body: string): string {
+		// Remove user content section first
+		let cleanBody = body;
+		const separatorIndex = cleanBody.indexOf('\n---\n');
 		if (separatorIndex !== -1) {
-			description = description.substring(0, separatorIndex);
+			cleanBody = cleanBody.substring(0, separatorIndex);
 		}
 
-		return description.trim();
+		// Extract Notes section
+		const notesMatch = cleanBody.match(/## Notes\n([\s\S]*?)(?=\n## |\n---\n|$)/i);
+		if (notesMatch) {
+			return notesMatch[1].trim();
+		}
+
+		// If no Notes section, check for Description section (backward compatibility)
+		const descMatch = cleanBody.match(/## Description\n([\s\S]*?)(?=\n## |\n---\n|$)/i);
+		if (descMatch) {
+			return descMatch[1].trim();
+		}
+
+		// If no sections found, treat entire body (minus checklist) as notes for backward compatibility
+		const withoutChecklist = cleanBody.replace(/## Checklist[\s\S]*?(?=\n---|\n##|$)/i, '').trim();
+		return withoutChecklist;
 	}
 }

@@ -303,6 +303,20 @@ export class TaskFileManager {
 		return settings.enableTaskNotes && filePath.startsWith(settings.taskNotesFolder);
 	}
 
+	/**
+	 * Find a TickTick ID by file path (reverse lookup in the index)
+	 * Used when a file is deleted and we need to find which task it was
+	 */
+	findTickTickIdByFilePath(filePath: string): string | null {
+		const settings = getSettings();
+		for (const [tickTickId, entry] of Object.entries(settings.taskFileIndex)) {
+			if (entry.filePath === filePath) {
+				return tickTickId;
+			}
+		}
+		return null;
+	}
+
 	// ---- Private helper methods ----
 
 	/**
@@ -392,7 +406,7 @@ export class TaskFileManager {
 	/**
 	 * Remove a task from the file index
 	 */
-	private removeFromFileIndex(tickTickId: string): void {
+	removeFromFileIndex(tickTickId: string): void {
 		const settings = getSettings();
 		const newIndex = { ...settings.taskFileIndex };
 		delete newIndex[tickTickId];

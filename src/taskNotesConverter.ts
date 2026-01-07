@@ -97,7 +97,7 @@ export class TaskNotesConverter {
 		if (notesContent.length > 0) {
 			const cleanNotes = this.cleanDescriptionForTaskNote(notesContent);
 			if (cleanNotes) {
-				body += '## Notes\n' + cleanNotes + '\n';
+				body += '## Description\n' + cleanNotes + '\n';
 			}
 		}
 
@@ -105,7 +105,9 @@ export class TaskNotesConverter {
 		if (task.items && task.items.length > 0) {
 			if (body) body += '\n';
 			body += '## Checklist\n';
-			for (const item of task.items) {
+			// Sort items by sortOrder to maintain TickTick's order
+			const sortedItems = [...task.items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+			for (const item of sortedItems) {
 				const checkbox = item.status > 0 ? '[x]' : '[ ]';
 				body += `- ${checkbox} ${item.title} %%${item.id}%%\n`;
 			}
@@ -501,20 +503,12 @@ export class TaskNotesConverter {
 			cleanBody = cleanBody.substring(0, separatorIndex);
 		}
 
-		// Extract Notes section
-		const notesMatch = cleanBody.match(/## Notes\n([\s\S]*?)(?=\n## |\n---\n|$)/i);
-		if (notesMatch) {
-			return notesMatch[1].trim();
-		}
-
-		// If no Notes section, check for Description section (backward compatibility)
+		// Extract Description section
 		const descMatch = cleanBody.match(/## Description\n([\s\S]*?)(?=\n## |\n---\n|$)/i);
 		if (descMatch) {
 			return descMatch[1].trim();
 		}
 
-		// If no sections found, treat entire body (minus checklist) as notes for backward compatibility
-		const withoutChecklist = cleanBody.replace(/## Checklist[\s\S]*?(?=\n---|\n##|$)/i, '').trim();
-		return withoutChecklist;
+		return '';
 	}
 }

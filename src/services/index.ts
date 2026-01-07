@@ -165,9 +165,20 @@ export class TickTickService {
 		// In TaskNotes mode, handle TaskNotes file deletion separately
 		if (getSettings().enableTaskNotes) {
 			if (this.taskFileManager?.isTaskNoteFile(filePath)) {
-				// TaskNotes file was deleted - the task still exists in TickTick
-				// Just clean up any index entries
-				log.debug(`TaskNotes file deleted: ${filePath}`);
+				// TaskNotes file was deleted - find the task and delete from TickTick with confirmation
+				const tickTickId = this.taskFileManager.findTickTickIdByFilePath(filePath);
+				if (tickTickId) {
+					log.debug(`TaskNotes file deleted: ${filePath}, task ID: ${tickTickId}`);
+					await doWithLock(LOCK_TASKS, async () => {
+						// Use the same deletion flow as inline tasks (with confirmation modal)
+						await this.tickTickSync?.deleteTasksByIds([tickTickId]);
+					});
+					// Clean up file index regardless of confirmation (file is already deleted)
+					this.taskFileManager.removeFromFileIndex(tickTickId);
+					return true;
+				}
+				// No task ID found in index - file wasn't linked to TickTick
+				log.debug(`TaskNotes file deleted but no task ID found in index: ${filePath}`);
 				return true;
 			}
 			// Not a TaskNotes file in TaskNotes mode - skip inline task processing

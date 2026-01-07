@@ -103,7 +103,7 @@
 		to view and manage your tasks.
 	</p>
 	<p class="setting-item-description">
-		<strong>Note:</strong> When enabled, inline tasks (- [ ] #ticktick) will NOT sync.
+		<strong>Note:</strong> When enabled, inline tasks (<code>- [ ] #ticktick</code>) will NOT sync.
 		Only TaskNotes files in the configured folder will be synced with TickTick.
 	</p>
 

@@ -1640,6 +1640,7 @@ export class SyncMan {
 						dueDate: updatedTaskData.dueDate || cachedTask.dueDate,
 						startDate: updatedTaskData.startDate || cachedTask.startDate,
 						tags: updatedTaskData.tags || cachedTask.tags,
+						desc: updatedTaskData.desc || cachedTask.desc,
 						content: updatedTaskData.content || cachedTask.content,
 						items: updatedTaskData.items || cachedTask.items,
 						modifiedTime: this.plugin.dateMan?.formatDateToISO(new Date()) || ''
@@ -1689,6 +1690,7 @@ export class SyncMan {
 		if (taskFileData.priority !== undefined && taskFileData.priority !== cachedTask.priority) return true;
 		if (taskFileData.dueDate && taskFileData.dueDate !== cachedTask.dueDate) return true;
 		if (taskFileData.startDate && taskFileData.startDate !== cachedTask.startDate) return true;
+		if (taskFileData.desc !== undefined && taskFileData.desc !== cachedTask.desc) return true;
 
 		// Compare tags
 		if (taskFileData.tags && JSON.stringify(taskFileData.tags.sort()) !== JSON.stringify((cachedTask.tags || []).sort())) {

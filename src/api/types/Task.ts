@@ -49,7 +49,8 @@ export interface ITask {
 export interface ITaskItem {
 	id: string,
 	title: string,
-	status: number
+	status: number,
+	sortOrder?: number
 }
 
 

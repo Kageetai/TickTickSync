@@ -111,6 +111,17 @@ export class TickTickService {
 				//the file system is farckled. Wait until next sync to avoid race conditions.
 				return;
 			}
+
+			// In TaskNotes mode, skip inline task sync and only sync TaskNotes files
+			if (getSettings().enableTaskNotes) {
+				// Only sync task file changes back to TickTick (TaskNotes → TickTick direction)
+				await doWithLock(LOCK_TASKS, async () => {
+					await this.tickTickSync?.syncTaskFileChangesToTickTick();
+				});
+				return;
+			}
+
+			// Inline task mode: sync vault files for inline task changes
 			await this.syncFiles(false);
 
 			// Sync task file changes back to TickTick (TaskNotes → TickTick direction)
@@ -141,12 +152,27 @@ export class TickTickService {
 	}
 
 	async deletedTaskCheck(filePath: string | null) {
+		// Skip inline task deletion check in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			return;
+		}
 		return await doWithLock(LOCK_TASKS, async () => {
 			return this.tickTickSync?.deletedTaskCheck(filePath);
 		});
 	}
 
 	async deletedFileCheck(filePath: string): Promise<boolean> {
+		// In TaskNotes mode, handle TaskNotes file deletion separately
+		if (getSettings().enableTaskNotes) {
+			if (this.taskFileManager?.isTaskNoteFile(filePath)) {
+				// TaskNotes file was deleted - the task still exists in TickTick
+				// Just clean up any index entries
+				log.debug(`TaskNotes file deleted: ${filePath}`);
+				return true;
+			}
+			// Not a TaskNotes file in TaskNotes mode - skip inline task processing
+			return false;
+		}
 
 		const fileMetadata = await this.cacheOperation?.getFileMetadata(filePath, null);
 		if (!fileMetadata || !fileMetadata.TickTickTasks) {
@@ -176,6 +202,11 @@ export class TickTickService {
 			return true;
 		}
 
+		// In TaskNotes mode, skip inline task file rename handling
+		if (getSettings().enableTaskNotes) {
+			return false;
+		}
+
 		//Read fileMetadata for inline task files
 		//const fileMetadata = await this.fileOperation.getFileMetadata(file)
 		const fileMetadata = await this.cacheOperation?.getFileMetadata(oldPath, null);
@@ -196,18 +227,30 @@ export class TickTickService {
 	}
 
 	async fullTextNewTaskCheck(filepath: string) {
+		// Skip inline task check in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			return;
+		}
 		await doWithLock(LOCK_TASKS, async () => {
 			await this.tickTickSync?.fullTextNewTaskCheck(filepath);
 		});
 	}
 
 	async lineNewContentTaskCheck(editor: Editor, info: MarkdownView | MarkdownFileInfo) {
+		// Skip inline task check in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			return;
+		}
 		return await doWithLock(LOCK_TASKS, async () => {
 			await this.tickTickSync?.lineNewContentTaskCheck(editor, info);
 		});
 	}
 
 	async lineModifiedTaskCheck(filepath: string, lastLineText: string, lastLine: number): Promise<boolean> {
+		// Skip inline task check in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			return false;
+		}
 		return await doWithLock(LOCK_TASKS, async () => {
 			const file = this.plugin.app.vault.getAbstractFileByPath(filepath) as TFile;
 			const fileMap = new FileMap(this.plugin.app, this.plugin, file);
@@ -378,6 +421,11 @@ export class TickTickService {
 	 * @param bForceUpdate
 	 */
 	async syncFiles(bForceUpdate: boolean) {
+		// Skip inline task sync in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			log.debug('Skipping syncFiles in TaskNotes mode');
+			return;
+		}
 		const filesToSync = getSettings().fileMetadata;
 		if (!filesToSync) {
 			log.warn('No sync files found.');

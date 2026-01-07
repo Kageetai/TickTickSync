@@ -250,8 +250,13 @@ export class FileMap {
 	/**
 	 * Mark all tasks as TickTick Tasks
 	 * called only when enableFullVaultSync is true.
+	 * Disabled in TaskNotes mode (inline tasks are not used).
 	 */
 	markAllTasks() {
+		// Skip in TaskNotes mode - Full Vault Sync doesn't apply
+		if (getSettings().enableTaskNotes) {
+			return false;
+		}
 		let modified = false;
 		const lines = this.fileLines;
 		for (let i = 0; i < lines.length; i++) {

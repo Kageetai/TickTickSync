@@ -31,8 +31,16 @@
 
 	async function handleEnableChange(checked: boolean) {
 		settingsStore.update((s) => ({ ...s, enableTaskNotes: checked }));
-		const msg = checked ? 'TaskNotes integration enabled.' : 'TaskNotes integration disabled.';
-		new Notice(msg);
+		if (checked) {
+			// Show warning about inline tasks not being synced
+			new Notice(
+				'TaskNotes mode enabled. Inline tasks (- [ ] #ticktick) will no longer sync. ' +
+				'Only TaskNotes files in the configured folder will be synced.',
+				10000
+			);
+		} else {
+			new Notice('TaskNotes mode disabled. Inline tasks will sync again.');
+		}
 		await plugin.saveSettings();
 	}
 
@@ -88,16 +96,18 @@
 <div class="tasknotes-settings">
 	<h2>TaskNotes Integration</h2>
 	<p class="setting-item-description">
-		Create dedicated markdown files for each task with YAML frontmatter compatible with TaskNotes.
-		Works alongside existing inline tasks.
+		Use dedicated markdown files for each task with YAML frontmatter compatible with TaskNotes.
+		<strong>Note:</strong> When enabled, inline tasks (- [ ] #ticktick) will NOT sync.
+		Only TaskNotes files in the configured folder will be synced with TickTick.
 	</p>
 
 	<!-- Enable Toggle -->
 	<div class="setting-item">
 		<div class="setting-item-info">
-			<div class="setting-item-name">Enable TaskNotes</div>
+			<div class="setting-item-name">Enable TaskNotes Mode</div>
 			<div class="setting-item-description">
-				Create a dedicated markdown file for each task with YAML frontmatter.
+				Switch to TaskNotes mode. Tasks are synced via markdown files with YAML frontmatter
+				instead of inline tasks.
 			</div>
 		</div>
 		<div class="setting-item-control">
@@ -128,26 +138,6 @@
 					on:blur={(e) => handleFolderChange(e.target.value)}
 					placeholder="TaskNotes/Tasks"
 				/>
-			</div>
-		</div>
-
-		<!-- Link Inline to Task File -->
-		<div class="setting-item">
-			<div class="setting-item-info">
-				<div class="setting-item-name">Link inline tasks to task files</div>
-				<div class="setting-item-description">
-					Wrap task titles in [[wikilinks]] pointing to the task file.
-				</div>
-			</div>
-			<div class="setting-item-control">
-				<label class="toggle-switch">
-					<input
-						type="checkbox"
-						checked={linkInlineToTaskFile}
-						on:change={(e) => handleLinkInlineChange(e.target.checked)}
-					/>
-					<span class="slider"></span>
-				</label>
 			</div>
 		</div>
 

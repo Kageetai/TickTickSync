@@ -2,7 +2,8 @@ import '@/static/index.css';
 import '@/static/styles.css';
 
 import { type Editor, type MarkdownFileInfo, Platform } from 'obsidian';
-import { MarkdownView, Notice, Plugin, TFolder } from 'obsidian';
+import { MarkdownView, Notice, Plugin, TFile, TFolder } from 'obsidian';
+import type { ITask } from '@/api/types/Task';
 
 //settings
 import {
@@ -180,6 +181,11 @@ export default class TickTickSync extends Plugin {
 	}
 
 	async lineNumberCheck(): Promise<boolean> {
+		// Skip inline task checking in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			return false;
+		}
+
 		const markDownView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!markDownView) {
 			return false;
@@ -224,6 +230,11 @@ export default class TickTickSync extends Plugin {
 	}
 
 	async checkboxEventhandler(evt: MouseEvent, editor: Editor) {
+		// Skip inline task checkbox handling in TaskNotes mode
+		if (getSettings().enableTaskNotes) {
+			return;
+		}
+
 		const target = evt.target as HTMLInputElement;
 		const bOpenTask = target.checked;
 
@@ -592,12 +603,14 @@ export default class TickTickSync extends Plugin {
 
 		// Get the TickTick ID from the file
 		const tickTickId = await taskFileManager.getTickTickIdFromFile(activeFile);
+
 		if (!tickTickId) {
-			new Notice('This file does not have a ticktick_id. It may not be a task file.');
+			// No ticktick_id - this is a new task file that needs to be synced to TickTick
+			await this.createTaskFromTaskFile(activeFile);
 			return;
 		}
 
-		// Force sync by triggering the sync method
+		// Existing task - force sync by triggering the sync method
 		try {
 			const result = await this.service?.tickTickSync?.syncTaskFileChangesToTickTick();
 			if (result) {
@@ -608,6 +621,61 @@ export default class TickTickSync extends Plugin {
 		} catch (error) {
 			log.error('Error syncing task file:', error);
 			new Notice(`Failed to sync task file: ${error}`);
+		}
+	}
+
+	/**
+	 * Create a new task in TickTick from a TaskNotes file that doesn't have a ticktick_id
+	 */
+	private async createTaskFromTaskFile(file: TFile) {
+		try {
+			const taskFileManager = this.service?.taskFileManager;
+			if (!taskFileManager) {
+				new Notice('TaskNotes feature is not initialized.');
+				return;
+			}
+
+			// Read and parse the task file
+			const taskData = await taskFileManager.getTaskDataFromFile(file);
+			if (!taskData.title) {
+				new Notice('Task file must have a title in frontmatter.');
+				return;
+			}
+
+			// Create a new task object
+			const newTask: Partial<ITask> = {
+				title: taskData.title,
+				status: taskData.status ?? 0,
+				priority: taskData.priority ?? 0,
+				dueDate: taskData.dueDate,
+				startDate: taskData.startDate,
+				desc: taskData.desc,
+				tags: taskData.tags,
+				items: taskData.items,
+				projectId: getSettings().defaultProjectId || getSettings().inboxID
+			};
+
+			// Create the task in TickTick
+			const createdTask = await this.tickTickRestAPI?.AddTask(newTask as ITask);
+			if (!createdTask || !createdTask.id) {
+				new Notice('Failed to create task in TickTick.');
+				return;
+			}
+
+			// Add date holder to the task
+			this.dateMan?.addDateHolderToTask(createdTask);
+
+			// Save to cache
+			await this.cacheOperation?.appendTaskToCache(createdTask);
+
+			// Update the task file with the new ticktick_id
+			await taskFileManager.updateTaskFile(createdTask, file);
+
+			new Notice(`Created task "${createdTask.title}" in TickTick and linked to this file.`);
+			log.debug(`Created new task ${createdTask.id} from task file ${file.path}`);
+		} catch (error) {
+			log.error('Error creating task from task file:', error);
+			new Notice(`Failed to create task: ${error}`);
 		}
 	}
 

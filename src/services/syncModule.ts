@@ -1064,12 +1064,16 @@ export class SyncMan {
 				newTickTickTasks.forEach((newTickTickTask: ITask) => {
 					this.plugin.dateMan?.addDateHolderToTask(newTickTickTask);
 				});
-				let result = await this.plugin.fileOperation?.synchronizeToVault(newTickTickTasks, false);
-				if (result) {
-					// Sleep for 1 seconds
-					await new Promise(resolve => setTimeout(resolve, 1000));
+
+				// In TaskNotes mode, skip inline task creation - only create TaskNotes files
+				if (!getSettings().enableTaskNotes) {
+					let result = await this.plugin.fileOperation?.synchronizeToVault(newTickTickTasks, false);
+					if (result) {
+						// Sleep for 1 seconds
+						await new Promise(resolve => setTimeout(resolve, 1000));
+					}
+					bModifiedFileSystem = true;
 				}
-				bModifiedFileSystem = true;
 
 				// Create TaskNotes-compatible task files for new tasks
 				await this.syncTaskFilesForTasks(newTickTickTasks, 'create');
@@ -1101,11 +1105,14 @@ export class SyncMan {
 						}
 					});
 					for (const task of reallyDeletedTickTickTasks) {
-						try {
-							await this.plugin.fileOperation?.deleteTaskFromFile(task);
-						} catch (error) {
-							//Assume that the file is goine, but we're trying to clear cache anyway.
-							log.debug('Task deletion failed.', error);
+						// In TaskNotes mode, skip inline task deletion
+						if (!getSettings().enableTaskNotes) {
+							try {
+								await this.plugin.fileOperation?.deleteTaskFromFile(task);
+							} catch (error) {
+								//Assume that the file is gone, but we're trying to clear cache anyway.
+								log.debug('Task deletion failed.', error);
+							}
 						}
 						try {
 							await this.plugin.cacheOperation?.deleteTaskFromCache(task.id);
@@ -1122,15 +1129,17 @@ export class SyncMan {
 			}
 
 
-			// Check for new tasks in Obsidian
-			const newObsidianTasks = tasksInCache.filter(task => !tasksFromTickTic.some(t => t.id === task.id));
-			const reallyNewObsidianTasks = newObsidianTasks.filter(task => reallyDeletedTickTickTasks.some(t => t.taskId === task.id));
-			//this.dumpArray('== Add to TickTick:', reallyNewObsidianTasks);
-			//upload local only tasks to TickTick
+			// Check for new tasks in Obsidian (inline tasks only - in TaskNotes mode this doesn't apply)
+			if (!getSettings().enableTaskNotes) {
+				const newObsidianTasks = tasksInCache.filter(task => !tasksFromTickTic.some(t => t.id === task.id));
+				const reallyNewObsidianTasks = newObsidianTasks.filter(task => reallyDeletedTickTickTasks.some(t => t.taskId === task.id));
+				//this.dumpArray('== Add to TickTick:', reallyNewObsidianTasks);
+				//upload local only tasks to TickTick
 
-			for (const task of reallyNewObsidianTasks) {
-				await this.plugin.tickTickRestAPI?.AddTask(task);
-				bModifiedFileSystem = true;
+				for (const task of reallyNewObsidianTasks) {
+					await this.plugin.tickTickRestAPI?.AddTask(task);
+					bModifiedFileSystem = true;
+				}
 			}
 
 
@@ -1171,11 +1180,15 @@ export class SyncMan {
 
 			if (recentUpdates.length > 0) {
 				// this.dumpArray('== Update in  Obsidian:', recentUpdates)
-				let result = await this.plugin.fileOperation?.synchronizeToVault(recentUpdates, true);
-				if (result) {
-					// Sleep for 1 seconds
-					await new Promise(resolve => setTimeout(resolve, 1000));
-					bModifiedFileSystem = true;
+
+				// In TaskNotes mode, skip inline task updates - only update TaskNotes files
+				if (!getSettings().enableTaskNotes) {
+					let result = await this.plugin.fileOperation?.synchronizeToVault(recentUpdates, true);
+					if (result) {
+						// Sleep for 1 seconds
+						await new Promise(resolve => setTimeout(resolve, 1000));
+						bModifiedFileSystem = true;
+					}
 				}
 
 				// Update TaskNotes-compatible task files for updated tasks
@@ -1638,8 +1651,11 @@ export class SyncMan {
 						// Update the cache
 						await this.plugin.cacheOperation?.updateTaskToCache(result, null);
 
-						// Update the inline task in the vault file
-						await this.updateInlineTaskFromTaskFile(tickTickId, result);
+						// In inline mode, also update the inline task in the vault file
+						// In TaskNotes mode, skip this as there are no inline tasks
+						if (!getSettings().enableTaskNotes) {
+							await this.updateInlineTaskFromTaskFile(tickTickId, result);
+						}
 
 						// Update the task file index
 						this.plugin.cacheOperation?.updateTaskFileIndex(tickTickId, file.path);

@@ -96,7 +96,13 @@
 <div class="tasknotes-settings">
 	<h2>TaskNotes Integration</h2>
 	<p class="setting-item-description">
-		Use dedicated markdown files for each task with YAML frontmatter compatible with TaskNotes.
+		Use dedicated markdown files for each task with YAML frontmatter, compatible with TaskNotes.
+		This mode is designed to be used together with the
+		<a href="https://github.com/obsidian-tasks-group/obsidian-tasks" target="_blank">TaskNotes plugin</a>
+		or <a href="https://obsidian.md/blog/introducing-obsidian-bases/" target="_blank">Obsidian Bases</a>
+		to view and manage your tasks.
+	</p>
+	<p class="setting-item-description">
 		<strong>Note:</strong> When enabled, inline tasks (- [ ] #ticktick) will NOT sync.
 		Only TaskNotes files in the configured folder will be synced with TickTick.
 	</p>

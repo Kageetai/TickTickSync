@@ -54,6 +54,12 @@ Task description and notes here.
 
 TaskNotes mode creates a dedicated markdown file for each task, making it ideal for users who prefer file-based task management or want to add extensive notes to their tasks.
 
+This mode is designed to be used together with:
+- **[TaskNotes plugin](https://github.com/obsidian-tasks-group/obsidian-tasks)** - View and manage your tasks with a dedicated task management interface
+- **[Obsidian Bases](https://obsidian.md/blog/introducing-obsidian-bases/)** - Create custom database views of your tasks using Obsidian's built-in Bases feature
+
+Both options let you query, filter, and visualize your task files based on their frontmatter properties.
+
 ### How to Enable
 
 1. Go to Settings → TickTickSync → TaskNotes

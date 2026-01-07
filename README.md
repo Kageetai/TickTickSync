@@ -11,22 +11,24 @@ The plugin works best when the [Tasks](https://github.com/obsidian-tasks-group/o
 - Bidirectional synchronization of Tasks and Notes.
 - Date/Time compatibility with the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin.
 - Mobile Compatible.
-- **TaskNotes Integration** - Create dedicated markdown files for each task with YAML frontmatter.
+- **TaskNotes Mode** - Use dedicated markdown files for tasks instead of inline task format.
 
-## TaskNotes Integration
+## Sync Modes
 
-TaskNotes integration creates a dedicated markdown file for each synced task. This works alongside the existing inline task format, giving you the best of both worlds.
+TickTickSync supports two **mutually exclusive** sync modes:
 
-### How It Works
+### 1. Inline Tasks Mode (Default)
 
-When enabled, each task synced from TickTick gets:
-1. **Inline task** (existing behavior) - A task line in your notes like `- [ ] Task #ticktick %%[ticktick_id:: abc123]%%`
-2. **Task file** (new) - A dedicated markdown file in your TaskNotes folder with YAML frontmatter
+Tasks are synced using inline markdown format in your notes:
+```markdown
+- [ ] Buy groceries #ticktick 📅 2024-01-15 ⏫ %%[ticktick_id:: abc123def456]%%
+```
 
-Task files are compatible with the [TaskNotes](https://github.com/obsidian-tasks-group/obsidian-tasks) format and include properties like status, priority, due date, and project.
+This is the traditional mode that works with the [Tasks](https://github.com/obsidian-tasks-group/obsidian-tasks) plugin format.
 
-### Example Task File
+### 2. TaskNotes Mode
 
+Tasks are synced as dedicated markdown files with YAML frontmatter:
 ```markdown
 ---
 ticktick_id: abc123def456789012345678
@@ -40,31 +42,61 @@ tags:
 
 # Buy groceries
 
-Task description and any notes you want to add here.
+Task description and notes here.
 ```
+
+**Important:** These modes are mutually exclusive. When TaskNotes mode is enabled:
+- Inline tasks (`- [ ] #ticktick`) will **NOT** sync
+- Only task files in the configured TaskNotes folder will sync with TickTick
+- Full Vault Sync is disabled
+
+## TaskNotes Mode
+
+TaskNotes mode creates a dedicated markdown file for each task, making it ideal for users who prefer file-based task management or want to add extensive notes to their tasks.
+
+### How to Enable
+
+1. Go to Settings → TickTickSync → TaskNotes
+2. Enable "TaskNotes Mode"
+3. Configure the TaskNotes folder path
+4. A warning will appear reminding you that inline tasks will no longer sync
 
 ### Settings
 
-Enable TaskNotes in Settings → TickTickSync → TaskNotes:
-
-- **Enable TaskNotes** - Toggle the feature on/off
+- **Enable TaskNotes Mode** - Switch between inline tasks and TaskNotes mode
 - **Task Notes Folder** - Where task files are created (default: `TaskNotes/Tasks`)
-- **Link inline tasks to task files** - Wrap task titles in `[[wikilinks]]` pointing to task files
 - **Task Tag** - Tag added to task files (default: `task`)
 - **Field Mapping** - Customize frontmatter field names to match your setup
 - **Status/Priority Values** - Customize values used in frontmatter
 
+### Creating Tasks
+
+In TaskNotes mode, you have several options for creating tasks:
+
+1. **Create in TickTick** - Tasks created in TickTick will automatically sync to Obsidian as task files
+2. **Create manually** - Create a markdown file in your TaskNotes folder with the required frontmatter
+3. **Use the command** - Open a task file without a `ticktick_id` and run "Sync current task file to TickTick" to create the task in TickTick
+
 ### Commands
 
-- **Open task file for task under cursor** - Opens (or creates) the task file for the task on your current line
-- **Create task files for all existing tasks** - Batch creates task files for all synced tasks
-- **Sync current task file to TickTick** - Syncs changes from the current task file back to TickTick
+- **Sync current task file to TickTick** - Syncs the current task file to TickTick. If the file has no `ticktick_id`, creates a new task in TickTick and links it to the file.
 
 ### Bidirectional Sync
 
 Changes flow both ways:
-- **TickTick → Obsidian**: Task updates from TickTick update both inline tasks and task files
+- **TickTick → Obsidian**: Task updates from TickTick create/update task files
 - **Task Files → TickTick**: Editing frontmatter in task files syncs back to TickTick
+
+### Switching Modes
+
+When switching from Inline Tasks mode to TaskNotes mode:
+- Existing inline tasks will remain in your vault but will no longer sync
+- You may want to manually migrate important tasks to TaskNotes format
+- Tasks created in TickTick after enabling will sync as TaskNotes files
+
+When switching from TaskNotes mode to Inline Tasks mode:
+- TaskNotes files will remain but will no longer sync
+- New tasks will use the inline format
 
 ## Documentation
 

@@ -1,5 +1,13 @@
 ## CHANGELOG
 
+### 1.1.15
+Feature: TaskNotes and Inline Tasks are now mutually exclusive modes
+- When TaskNotes mode is enabled, inline tasks (`- [ ] #ticktick`) will NOT sync
+- Only TaskNotes files in the configured folder will sync with TickTick
+- Full Vault Sync is disabled when TaskNotes mode is enabled
+- New command: Sync unlinked task files to TickTick (creates tasks for files without ticktick_id)
+- Warning notice shown when enabling TaskNotes mode
+
 ### 1.1.14
 Feature: Can now login with SSO/2FA enabled account on Desktop
 Chore: Better singleton handling for API object

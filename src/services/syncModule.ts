@@ -1367,8 +1367,22 @@ export class SyncMan {
 	}
 
 	private async confirmDeletion(taskIds: string[], reason: string) {
-		const tasksTitles = await this.plugin.cacheOperation?.getTaskTitles(taskIds);
+		let tasksTitles = await this.plugin.cacheOperation?.getTaskTitles(taskIds) || [];
 
+		// If no titles found from cache, try to get them from the tasks directly
+		if (tasksTitles.length === 0 || tasksTitles.every(t => !t)) {
+			tasksTitles = [];
+			for (const taskId of taskIds) {
+				// Try to get task from cache
+				const task = this.plugin.cacheOperation?.loadTaskFromCacheID(taskId);
+				if (task?.title) {
+					tasksTitles.push(task.title);
+				} else {
+					// Fallback to showing task ID if no title found
+					tasksTitles.push(`Task ${taskId.substring(0, 8)}...`);
+				}
+			}
+		}
 
 		const myModal = new TaskDeletionModal(this.app, tasksTitles, reason, (result) => {
 			this.ret = result;

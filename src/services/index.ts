@@ -169,13 +169,36 @@ export class TickTickService {
 				const tickTickId = this.taskFileManager.findTickTickIdByFilePath(filePath);
 				if (tickTickId) {
 					log.debug(`TaskNotes file deleted: ${filePath}, task ID: ${tickTickId}`);
-					await doWithLock(LOCK_TASKS, async () => {
-						// Use the same deletion flow as inline tasks (with confirmation modal)
-						await this.tickTickSync?.deleteTasksByIds([tickTickId]);
-					});
-					// Clean up file index regardless of confirmation (file is already deleted)
-					this.taskFileManager.removeFromFileIndex(tickTickId);
-					return true;
+					try {
+						let deletedIds: string[] = [];
+						await doWithLock(LOCK_TASKS, async () => {
+							// Use the same deletion flow as inline tasks (with confirmation modal)
+							deletedIds = await this.tickTickSync?.deleteTasksByIds([tickTickId]) || [];
+						});
+
+						if (deletedIds.length > 0) {
+							// Deletion confirmed and successful - clean up file index
+							this.taskFileManager.removeFromFileIndex(tickTickId);
+						} else {
+							// Deletion was canceled by user - recreate the file so task isn't orphaned
+							const task = this.cacheOperation?.loadTaskFromCacheID(tickTickId);
+							if (task) {
+								await this.taskFileManager?.createTaskFile(task);
+								new Notice('Task file deletion canceled. File has been restored.');
+							}
+						}
+						return true;
+					} catch (error) {
+						log.error(`Failed to delete task for file ${filePath}:`, error);
+						new Notice(`Failed to delete task from TickTick. File will be restored.`, 5000);
+
+						// Recreate the file since deletion failed
+						const task = this.cacheOperation?.loadTaskFromCacheID(tickTickId);
+						if (task) {
+							await this.taskFileManager?.createTaskFile(task);
+						}
+						return false;
+					}
 				}
 				// No task ID found in index - file wasn't linked to TickTick
 				log.debug(`TaskNotes file deleted but no task ID found in index: ${filePath}`);

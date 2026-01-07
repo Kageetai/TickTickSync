@@ -351,10 +351,16 @@ export class TaskNotesConverter {
 	// ---- Private helper methods ----
 
 	private sanitizeFileName(fileName: string): string {
-		// Remove invalid characters
-		let sanitized = fileName.replace(TaskNotesConverter.INVALID_FILENAME_CHARS, '');
+		// SECURITY: First remove path separators to prevent path traversal attacks
+		let sanitized = fileName.replace(/[/\\]/g, '');
 
-		// Remove leading/trailing whitespace and dots
+		// Remove other invalid filename characters
+		sanitized = sanitized.replace(TaskNotesConverter.INVALID_FILENAME_CHARS, '');
+
+		// Remove control characters and null bytes
+		sanitized = sanitized.replace(/[\x00-\x1f\x7f-\x9f]/g, '');
+
+		// Remove leading/trailing whitespace and dots (prevent "." or ".." names)
 		sanitized = sanitized.trim().replace(/^\.+|\.+$/g, '');
 
 		// Truncate to max length
@@ -362,6 +368,8 @@ export class TaskNotesConverter {
 			sanitized = sanitized.substring(0, TaskNotesConverter.MAX_FILENAME_LENGTH);
 		}
 
+		// Return empty string if nothing remains - caller handles fallback
+		// This allows generateFileName to use task.id as fallback
 		return sanitized;
 	}
 
@@ -483,12 +491,14 @@ export class TaskNotesConverter {
 		// Match checklist items with IDs: - [ ] or - [x] text %%id%%
 		const itemRegex = /^-\s+\[([ xX])\]\s+(.*?)\s*%%([a-f0-9]+)%%\s*$/gm;
 		let match;
+		let sortOrder = 0;
 
 		while ((match = itemRegex.exec(body)) !== null) {
 			items.push({
 				id: match[3],
 				title: match[2].trim(),
-				status: match[1].toLowerCase() === 'x' ? 2 : 0
+				status: match[1].toLowerCase() === 'x' ? 2 : 0,
+				sortOrder: sortOrder++  // Preserve document order for round-trip sync
 			});
 		}
 

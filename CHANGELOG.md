@@ -1,6 +1,6 @@
 ## CHANGELOG
 
-### 1.1.15
+### 1.2.0
 Feature: TaskNotes and Inline Tasks are now mutually exclusive modes
 - When TaskNotes mode is enabled, inline tasks (`- [ ] #ticktick`) will NOT sync
 - Only TaskNotes files in the configured folder will sync with TickTick

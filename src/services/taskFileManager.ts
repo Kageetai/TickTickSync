@@ -73,7 +73,7 @@ export class TaskFileManager {
 		}
 
 		try {
-			// Read existing content to preserve user notes
+			// Read existing content to preserve user notes and frontmatter
 			const existingContent = await this.app.vault.read(existingFile);
 			const existingData = this.converter.parseTaskNoteFile(existingContent);
 
@@ -82,8 +82,8 @@ export class TaskFileManager {
 			// and will appear in the ## Description section, so we don't duplicate it here
 			const contentToPreserve = existingData.userContent;
 
-			// Generate new content, preserving user content
-			const newContent = this.converter.generateTaskFileContent(task, contentToPreserve);
+			// Generate new content, preserving user content and existing frontmatter
+			const newContent = this.converter.generateTaskFileContent(task, contentToPreserve, existingData.frontmatter);
 
 			// Update the file
 			await this.app.vault.modify(existingFile, newContent);

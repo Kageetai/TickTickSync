@@ -329,11 +329,21 @@ export class TaskNotesConverter {
 
 	/**
 	 * Generate complete task file content
+	 * @param task The TickTick task data
+	 * @param existingUserContent User content to preserve (content after --- separator)
+	 * @param existingFrontmatter Existing frontmatter to merge with TaskNotes fields
 	 */
-	generateTaskFileContent(task: ITask, existingUserContent?: string): string {
+	generateTaskFileContent(task: ITask, existingUserContent?: string, existingFrontmatter?: Record<string, unknown>): string {
 		const taskNote = this.convertTaskToTaskNote(task);
 
-		let content = this.generateFrontmatterYaml(taskNote.frontmatter);
+		// Merge existing frontmatter with new TaskNotes frontmatter
+		// TaskNotes fields take precedence, but preserve any extra user fields
+		const mergedFrontmatter = {
+			...existingFrontmatter,  // Keep existing fields (created, changed, etc.)
+			...taskNote.frontmatter  // TaskNotes fields override
+		};
+
+		let content = this.generateFrontmatterYaml(mergedFrontmatter);
 		content += '\n';
 
 		if (taskNote.body) {

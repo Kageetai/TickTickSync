@@ -313,11 +313,24 @@ export class TaskFileManager {
 	}
 
 	/**
-	 * Check if a file path is in the task notes folder
+	 * Check if a file is a TaskNotes file (either in the folder or indexed)
 	 */
 	isTaskNoteFile(filePath: string): boolean {
 		const settings = getSettings();
-		return settings.enableTaskNotes && filePath.startsWith(settings.taskNotesFolder);
+		if (!settings.enableTaskNotes) {
+			return false;
+		}
+		// Check if in TaskNotes folder
+		if (filePath.startsWith(settings.taskNotesFolder)) {
+			return true;
+		}
+		// Also check if the file is in the task file index (synced from elsewhere)
+		for (const entry of Object.values(settings.taskFileIndex)) {
+			if (entry.filePath === filePath) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

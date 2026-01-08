@@ -92,16 +92,16 @@ export class TaskNotesConverter {
 		// Build body content
 		let body = '';
 
-		// Add notes (task.desc is the TickTick "description", task.content is legacy)
+		// Add notes directly (no heading) - task.desc is the TickTick "description", task.content is legacy
 		const notesContent = task.desc || task.content || '';
 		if (notesContent.length > 0) {
 			const cleanNotes = this.cleanDescriptionForTaskNote(notesContent);
 			if (cleanNotes) {
-				body += '## Description\n' + cleanNotes + '\n';
+				body += cleanNotes + '\n';
 			}
 		}
 
-		// Add checklist items if present
+		// Add checklist items if present (with heading)
 		if (task.items && task.items.length > 0) {
 			if (body) body += '\n';
 			body += '## Checklist\n';
@@ -517,29 +517,27 @@ export class TaskNotesConverter {
 	}
 
 	private extractNotesFromBody(body: string): string {
-		// Remove user content section first
+		// Remove user content section first (content after --- separator)
 		let cleanBody = body;
 		const separatorIndex = cleanBody.indexOf('\n---\n');
 		if (separatorIndex !== -1) {
 			cleanBody = cleanBody.substring(0, separatorIndex);
 		}
 
-		// Extract Description section if it exists
+		// Check for legacy ## Description section (for backwards compatibility)
 		const descMatch = cleanBody.match(/## Description\n([\s\S]*?)(?=\n## |\n---\n|$)/i);
 		if (descMatch) {
 			return descMatch[1].trim();
 		}
 
-		// If no Description section, check if this is a regular file (no TaskNotes structure)
-		// In that case, use the entire body as description (excluding checklist items)
-		const checklistMatch = cleanBody.match(/## Checklist\n/i);
-		if (checklistMatch) {
-			// Has checklist but no description section - return empty
-			return '';
+		// Check if there's a ## Checklist section - extract content before it
+		const checklistIndex = cleanBody.search(/\n## Checklist\n/i);
+		if (checklistIndex !== -1) {
+			// Return everything before the checklist as the description
+			return cleanBody.substring(0, checklistIndex).trim();
 		}
 
-		// No TaskNotes structure at all - use the entire body as description
-		// (This handles regular markdown files being synced for the first time)
+		// No special sections - use the entire body as description
 		return cleanBody.trim();
 	}
 }

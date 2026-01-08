@@ -158,6 +158,12 @@ const task = {
 };
 ```
 
+**Task vs Note:** The `kind` field determines item type:
+- `kind: 'TEXT'` - Creates a Task (default)
+- `kind: 'NOTE'` - Creates a Note
+
+Notes in TickTick don't have checkboxes and are meant for reference material rather than actionable items.
+
 ## Testing
 
 Tests use Vitest with jsdom environment. Mock Obsidian API is in `src/test/AppPluginDefinitions.ts`.

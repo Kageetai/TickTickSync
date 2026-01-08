@@ -432,7 +432,8 @@ export class Tick {
 				remindTime: jsonOptions.remindTime ? jsonOptions.remindTime : null,
 				tags: jsonOptions.tags ? jsonOptions.tags : [],
 				childIds: jsonOptions.childIds ? jsonOptions.childIds : [],
-				parentId: jsonOptions.parentId ? jsonOptions.parentId : null
+				parentId: jsonOptions.parentId ? jsonOptions.parentId : null,
+				kind: jsonOptions.kind ? jsonOptions.kind : undefined  // 'NOTE' for notes, 'TEXT' for tasks
 			};
 
 			const url = `${this.apiUrl}/${TaskEndPoint}`;

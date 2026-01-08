@@ -479,6 +479,7 @@ export default class TickTickSync extends Plugin {
 
 	/**
 	 * Force sync the currently open task file to TickTick
+	 * Works on any markdown file, not just files in the TaskNotes folder
 	 */
 	private async syncCurrentTaskFile() {
 		const activeFile = this.app.workspace.getActiveFile();
@@ -487,15 +488,15 @@ export default class TickTickSync extends Plugin {
 			return;
 		}
 
-		const taskFileManager = this.service?.taskFileManager;
-		if (!taskFileManager) {
-			new Notice('TaskNotes feature is not initialized.');
+		// Check if this is a markdown file
+		if (activeFile.extension !== 'md') {
+			new Notice('Current file is not a markdown file.');
 			return;
 		}
 
-		// Check if this is a task file
-		if (!taskFileManager.isTaskNoteFile(activeFile.path)) {
-			new Notice('Current file is not in the TaskNotes folder.');
+		const taskFileManager = this.service?.taskFileManager;
+		if (!taskFileManager) {
+			new Notice('TaskNotes feature is not initialized.');
 			return;
 		}
 

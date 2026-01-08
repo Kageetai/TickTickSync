@@ -80,18 +80,18 @@ Both options let you query, filter, and visualize your task files based on their
 In TaskNotes mode, you have several options for creating tasks:
 
 1. **Create in TickTick** - Tasks created in TickTick will automatically sync to Obsidian as task files
-2. **Create manually** - Create a markdown file in your TaskNotes folder with the required frontmatter
-3. **Use the command** - Open a task file without a `ticktick_id` and run "Sync current task file to TickTick" to create the task in TickTick
+2. **Create manually** - Create a markdown file with the required frontmatter (at minimum, a `title` field)
+3. **Use the command** - Open any markdown file and run "Sync current task file to TickTick" to create the task in TickTick
 
 ### Commands
 
-- **Sync current task file to TickTick** - Syncs the current task file to TickTick. If the file has no `ticktick_id`, creates a new task in TickTick and links it to the file.
+- **Sync current task file to TickTick** - Syncs any markdown file to TickTick. Works on any file in your vault (not limited to the TaskNotes folder). If the file has no `ticktick_id`, creates a new task in TickTick and links it to the file. The file must have a `title` in frontmatter. After syncing, the file will be updated with proper TaskNotes frontmatter (tags, status, priority, ticktick_id, etc.) and will continue to sync automatically with TickTick.
 
 ### Bidirectional Sync
 
 Changes flow both ways:
 - **TickTick → Obsidian**: Task updates from TickTick create/update task files
-- **Task Files → TickTick**: Editing frontmatter in task files syncs back to TickTick
+- **Task Files → TickTick**: Editing frontmatter in task files syncs back to TickTick (works for any synced file, not just files in the TaskNotes folder)
 
 ### Switching Modes
 

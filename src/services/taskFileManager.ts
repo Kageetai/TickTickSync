@@ -227,20 +227,32 @@ export class TaskFileManager {
 	}
 
 	/**
-	 * Get all task files in the task notes folder
+	 * Get all task files - both in the TaskNotes folder and any indexed files outside it
 	 */
 	async getAllTaskFiles(): Promise<TFile[]> {
 		const settings = getSettings();
+		const fileSet = new Set<string>(); // Track by path to avoid duplicates
 		const files: TFile[] = [];
 
+		// First, add all files in the TaskNotes folder
 		const folder = this.app.vault.getAbstractFileByPath(settings.taskNotesFolder);
-		if (!(folder instanceof TFolder)) {
-			return files;
+		if (folder instanceof TFolder) {
+			for (const file of this.app.vault.getMarkdownFiles()) {
+				if (file.path.startsWith(settings.taskNotesFolder)) {
+					files.push(file);
+					fileSet.add(file.path);
+				}
+			}
 		}
 
-		for (const file of this.app.vault.getMarkdownFiles()) {
-			if (file.path.startsWith(settings.taskNotesFolder)) {
-				files.push(file);
+		// Also include indexed files that may be outside the TaskNotes folder
+		for (const entry of Object.values(settings.taskFileIndex)) {
+			if (!fileSet.has(entry.filePath)) {
+				const file = this.app.vault.getAbstractFileByPath(entry.filePath);
+				if (file instanceof TFile) {
+					files.push(file);
+					fileSet.add(file.path);
+				}
 			}
 		}
 

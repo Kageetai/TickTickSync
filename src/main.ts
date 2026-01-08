@@ -509,17 +509,65 @@ export default class TickTickSync extends Plugin {
 			return;
 		}
 
-		// Existing task - force sync by triggering the sync method
+		// Existing task - sync this specific file to TickTick
 		try {
-			const result = await this.service?.tickTickSync?.syncTaskFileChangesToTickTick();
-			if (result) {
-				new Notice(`Task file synced to TickTick.`);
-			} else {
-				new Notice(`No changes to sync.`);
-			}
+			await this.updateTaskFromTaskFile(activeFile, tickTickId);
 		} catch (error) {
 			log.error('Error syncing task file:', error);
 			new Notice(`Failed to sync task file: ${error}`);
+		}
+	}
+
+	/**
+	 * Update an existing task in TickTick from a TaskNotes file
+	 */
+	private async updateTaskFromTaskFile(file: TFile, tickTickId: string) {
+		const taskFileManager = this.service?.taskFileManager;
+		if (!taskFileManager) {
+			new Notice('TaskNotes feature is not initialized.');
+			return;
+		}
+
+		// Get the cached task
+		const cachedTask = this.cacheOperation?.loadTaskFromCacheID(tickTickId);
+		if (!cachedTask) {
+			new Notice(`Task ${tickTickId} not found in cache. Try syncing from TickTick first.`);
+			return;
+		}
+
+		// Parse the task file to get updated data
+		const taskNoteData = await taskFileManager.readTaskFile(file);
+		const updatedTaskData = taskFileManager.converter.extractTaskData(taskNoteData);
+
+		// Merge the changes with the cached task
+		const taskToUpdate: ITask = {
+			...cachedTask,
+			title: updatedTaskData.title || cachedTask.title,
+			status: updatedTaskData.status !== undefined ? updatedTaskData.status : cachedTask.status,
+			priority: updatedTaskData.priority !== undefined ? updatedTaskData.priority : cachedTask.priority,
+			dueDate: updatedTaskData.dueDate || cachedTask.dueDate,
+			startDate: updatedTaskData.startDate || cachedTask.startDate,
+			tags: updatedTaskData.tags || cachedTask.tags,
+			desc: updatedTaskData.desc || cachedTask.desc,
+			content: updatedTaskData.desc || cachedTask.content, // Use desc for content too
+			items: updatedTaskData.items || cachedTask.items,
+			modifiedTime: this.dateMan?.formatDateToISO(new Date()) || ''
+		};
+
+		// Update TickTick
+		const result = await this.tickTickRestAPI?.UpdateTask(taskToUpdate);
+
+		if (result) {
+			// Update the cache
+			await this.cacheOperation?.updateTaskToCache(result, null);
+
+			// Update the task file index
+			this.cacheOperation?.updateTaskFileIndex(tickTickId, file.path);
+
+			await this.saveSettings();
+			new Notice(`Task "${taskToUpdate.title}" synced to TickTick.`);
+		} else {
+			new Notice('Failed to update task in TickTick.');
 		}
 	}
 

@@ -536,14 +536,21 @@ export default class TickTickSync extends Plugin {
 
 			// Read and parse the task file
 			const taskData = await taskFileManager.getTaskDataFromFile(file);
-			if (!taskData.title) {
-				new Notice('Task file must have a title in frontmatter.');
+
+			// Get title from frontmatter or filename (based on setting)
+			let title = taskData.title;
+			if (!title && getSettings().taskNotesTitleInFilename) {
+				// Use filename (without extension) as title
+				title = file.basename;
+			}
+			if (!title) {
+				new Notice('Task file must have a title (in frontmatter or filename).');
 				return;
 			}
 
 			// Create a new task object
 			const newTask: Partial<ITask> = {
-				title: taskData.title,
+				title: title,
 				status: taskData.status ?? 0,
 				priority: taskData.priority ?? 0,
 				dueDate: taskData.dueDate,

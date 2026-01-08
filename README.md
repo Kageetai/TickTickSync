@@ -72,6 +72,7 @@ Both options let you query, filter, and visualize your task files based on their
 - **Enable TaskNotes Mode** - Switch between inline tasks and TaskNotes mode
 - **Task Notes Folder** - Where task files are created (default: `TaskNotes/Tasks`)
 - **Task Tag** - Tag added to task files (default: `task`)
+- **Store title in filename** - Use the filename as task title instead of requiring it in frontmatter
 - **Field Mapping** - Customize frontmatter field names to match your setup
 - **Status/Priority Values** - Customize values used in frontmatter
 
@@ -80,12 +81,12 @@ Both options let you query, filter, and visualize your task files based on their
 In TaskNotes mode, you have several options for creating tasks:
 
 1. **Create in TickTick** - Tasks created in TickTick will automatically sync to Obsidian as task files
-2. **Create manually** - Create a markdown file with the required frontmatter (at minimum, a `title` field)
+2. **Create manually** - Create a markdown file (with a `title` in frontmatter, or use the filename if "Store title in filename" is enabled)
 3. **Use the command** - Open any markdown file and run "Sync current task file to TickTick" to create the task in TickTick
 
 ### Commands
 
-- **Sync current task file to TickTick** - Syncs any markdown file to TickTick. Works on any file in your vault (not limited to the TaskNotes folder). If the file has no `ticktick_id`, creates a new task in TickTick and links it to the file. The file must have a `title` in frontmatter. After syncing, the file will be updated with proper TaskNotes frontmatter (tags, status, priority, ticktick_id, etc.) and will continue to sync automatically with TickTick.
+- **Sync current task file to TickTick** - Syncs any markdown file to TickTick. Works on any file in your vault (not limited to the TaskNotes folder). If the file has no `ticktick_id`, creates a new task in TickTick and links it to the file. The task title can come from frontmatter or the filename (configurable via "Store title in filename" setting). After syncing, the file will be updated with proper TaskNotes frontmatter (tags, status, priority, ticktick_id, etc.) and will continue to sync automatically with TickTick.
 
 ### Bidirectional Sync
 

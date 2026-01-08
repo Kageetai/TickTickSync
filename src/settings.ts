@@ -97,6 +97,7 @@ export interface ITickTickSyncSettings {
 	taskNotesFolder: string;               // Folder for task files (default: "TaskNotes/Tasks")
 	taskNotesFileNameTemplate: string;     // File naming template (default: "{title}")
 	taskNotesTagValue: string;             // Tag added to task frontmatter (default: "task")
+	taskNotesTitleInFilename: boolean;     // Use filename as title instead of frontmatter
 	linkInlineToTaskFile: boolean;         // Wrap inline task title in [[wikilink]]
 	taskNotesFieldMapping: ITaskNotesFieldMapping;
 	taskNotesStatusValues: ITaskNotesStatusValues;
@@ -141,6 +142,7 @@ export const DEFAULT_SETTINGS: ITickTickSyncSettings = {
 	taskNotesFolder: 'TaskNotes/Tasks',
 	taskNotesFileNameTemplate: '{title}',
 	taskNotesTagValue: 'task',
+	taskNotesTitleInFilename: false,
 	linkInlineToTaskFile: true,
 	taskNotesFieldMapping: {
 		status: 'status',

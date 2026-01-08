@@ -10,6 +10,7 @@
 	$: taskNotesFolder = $settingsStore.taskNotesFolder;
 	$: linkInlineToTaskFile = $settingsStore.linkInlineToTaskFile;
 	$: taskNotesTagValue = $settingsStore.taskNotesTagValue;
+	$: taskNotesTitleInFilename = $settingsStore.taskNotesTitleInFilename;
 
 	// Field mapping values
 	$: statusField = $settingsStore.taskNotesFieldMapping?.status ?? 'status';
@@ -56,6 +57,11 @@
 
 	async function handleTagChange(value: string) {
 		settingsStore.update((s) => ({ ...s, taskNotesTagValue: value }));
+		await plugin.saveSettings();
+	}
+
+	async function handleTitleInFilenameChange(checked: boolean) {
+		settingsStore.update((s) => ({ ...s, taskNotesTitleInFilename: checked }));
 		await plugin.saveSettings();
 	}
 
@@ -162,6 +168,27 @@
 					on:blur={(e) => handleTagChange(e.target.value)}
 					placeholder="task"
 				/>
+			</div>
+		</div>
+
+		<!-- Title in Filename -->
+		<div class="setting-item">
+			<div class="setting-item-info">
+				<div class="setting-item-name">Store title in filename</div>
+				<div class="setting-item-description">
+					Use the filename as the task title instead of requiring a title in frontmatter.
+					When enabled, the filename (without extension) will be used as the task title.
+				</div>
+			</div>
+			<div class="setting-item-control">
+				<label class="toggle-switch">
+					<input
+						type="checkbox"
+						checked={taskNotesTitleInFilename}
+						on:change={(e) => handleTitleInFilenameChange(e.target.checked)}
+					/>
+					<span class="slider"></span>
+				</label>
 			</div>
 		</div>
 

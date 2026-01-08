@@ -340,9 +340,10 @@ export class TaskNotesConverter {
 			content += '\n' + taskNote.body;
 		}
 
-		// Preserve user content if any
-		if (existingUserContent) {
-			content += '\n\n---\n' + existingUserContent;
+		// Preserve user content if any (only if non-empty after trimming)
+		const trimmedUserContent = existingUserContent?.trim();
+		if (trimmedUserContent) {
+			content += '\n\n---\n' + trimmedUserContent;
 		}
 
 		return content;
@@ -513,12 +514,22 @@ export class TaskNotesConverter {
 			cleanBody = cleanBody.substring(0, separatorIndex);
 		}
 
-		// Extract Description section
+		// Extract Description section if it exists
 		const descMatch = cleanBody.match(/## Description\n([\s\S]*?)(?=\n## |\n---\n|$)/i);
 		if (descMatch) {
 			return descMatch[1].trim();
 		}
 
-		return '';
+		// If no Description section, check if this is a regular file (no TaskNotes structure)
+		// In that case, use the entire body as description (excluding checklist items)
+		const checklistMatch = cleanBody.match(/## Checklist\n/i);
+		if (checklistMatch) {
+			// Has checklist but no description section - return empty
+			return '';
+		}
+
+		// No TaskNotes structure at all - use the entire body as description
+		// (This handles regular markdown files being synced for the first time)
+		return cleanBody.trim();
 	}
 }

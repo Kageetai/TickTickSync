@@ -77,8 +77,13 @@ export class TaskFileManager {
 			const existingContent = await this.app.vault.read(existingFile);
 			const existingData = this.converter.parseTaskNoteFile(existingContent);
 
+			// Preserve explicit user content (content after --- separator in body)
+			// Note: For new files being synced, the body content goes into task.desc
+			// and will appear in the ## Description section, so we don't duplicate it here
+			const contentToPreserve = existingData.userContent;
+
 			// Generate new content, preserving user content
-			const newContent = this.converter.generateTaskFileContent(task, existingData.userContent);
+			const newContent = this.converter.generateTaskFileContent(task, contentToPreserve);
 
 			// Update the file
 			await this.app.vault.modify(existingFile, newContent);

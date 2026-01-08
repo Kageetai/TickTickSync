@@ -549,12 +549,15 @@ export default class TickTickSync extends Plugin {
 			}
 
 			// Create a new task object
+			// Note: TickTick uses both 'content' and 'desc' fields
+			// 'content' appears in the task body in TickTick UI
 			const newTask: Partial<ITask> = {
 				title: title,
 				status: taskData.status ?? 0,
 				priority: taskData.priority ?? 0,
 				dueDate: taskData.dueDate,
 				startDate: taskData.startDate,
+				content: taskData.desc,  // TickTick uses 'content' field for task body in UI
 				desc: taskData.desc,
 				tags: taskData.tags,
 				items: taskData.items,
@@ -568,11 +571,22 @@ export default class TickTickSync extends Plugin {
 				return;
 			}
 
+			// Ensure fields we sent are preserved (API might not return all fields)
+			if (!createdTask.desc && newTask.desc) {
+				createdTask.desc = newTask.desc;
+			}
+			if (!createdTask.content && newTask.content) {
+				createdTask.content = newTask.content;
+			}
+			if (!createdTask.projectId && newTask.projectId) {
+				createdTask.projectId = newTask.projectId;
+			}
+
 			// Add date holder to the task
 			this.dateMan?.addDateHolderToTask(createdTask);
 
-			// Save to cache
-			await this.cacheOperation?.appendTaskToCache(createdTask);
+			// Save to cache with file path
+			await this.cacheOperation?.appendTaskToCache(createdTask, file.path);
 
 			// Update the task file with the new ticktick_id
 			await taskFileManager.updateTaskFile(createdTask, file);

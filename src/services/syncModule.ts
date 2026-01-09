@@ -1555,17 +1555,26 @@ export class SyncMan {
 		for (const task of tasks) {
 			try {
 				if (action === 'create') {
-					await taskFileManager.createTaskFile(task);
-					log.debug(`Created task file for: ${task.title}`);
+					const file = await taskFileManager.createTaskFile(task);
+					if (file) {
+						// Add task to cache so it can be tracked for updates
+						await this.plugin.cacheOperation?.appendTaskToCache(task, file.path);
+						log.debug(`Created task file for: ${task.title}`);
+					}
 				} else if (action === 'update') {
 					const existingFile = await taskFileManager.findTaskFileById(task.id);
 					if (existingFile) {
 						await taskFileManager.updateTaskFile(task, existingFile);
+						// Update task in cache with new data
+						await this.plugin.cacheOperation?.updateTaskToCache(task, existingFile.path);
 						log.debug(`Updated task file for: ${task.title}`);
 					} else {
 						// Task file doesn't exist yet, create it
-						await taskFileManager.createTaskFile(task);
-						log.debug(`Created task file (was missing) for: ${task.title}`);
+						const file = await taskFileManager.createTaskFile(task);
+						if (file) {
+							await this.plugin.cacheOperation?.appendTaskToCache(task, file.path);
+							log.debug(`Created task file (was missing) for: ${task.title}`);
+						}
 					}
 				}
 			} catch (error) {

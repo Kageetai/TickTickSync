@@ -361,7 +361,14 @@ export class TaskFileManager {
 				await this.app.vault.createFolder(normalizedPath);
 				log.debug(`Created folder: ${normalizedPath}`);
 			} catch (error) {
-				// Folder might already exist (race condition)
+				// Folder might already exist (race condition or cache lag)
+				// Check error message and swallow "already exists" errors
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				if (errorMessage.includes('already exists') || errorMessage.includes('Folder already exists')) {
+					log.debug(`Folder already exists (race condition): ${normalizedPath}`);
+					return;
+				}
+				// Re-check if folder exists now before throwing
 				if (!this.app.vault.getAbstractFileByPath(normalizedPath)) {
 					throw error;
 				}

@@ -393,16 +393,24 @@ export class TaskNotesConverter {
 	private formatDateForFrontmatter(dateStr: string, isAllDay: boolean): string | null {
 		if (!dateStr) return null;
 
-		// Try to extract just the date portion for all-day tasks
-		// or full datetime for timed tasks
-		const dateMatch = dateStr.match(/(\d{4}-\d{2}-\d{2})(T(\d{2}:\d{2})(:\d{2})?)?/);
-		if (!dateMatch) return null;
+		// Convert UTC date to local timezone before extracting date/time
+		const date = new Date(dateStr);
+		if (isNaN(date.getTime())) return null;
 
-		if (isAllDay || !dateMatch[3]) {
-			return dateMatch[1]; // Just date: YYYY-MM-DD
+		// Get local date components
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, '0');
+		const day = String(date.getDate()).padStart(2, '0');
+
+		if (isAllDay) {
+			return `${year}-${month}-${day}`; // Just date: YYYY-MM-DD
 		}
 
-		return `${dateMatch[1]}T${dateMatch[3]}`; // Date + time: YYYY-MM-DDTHH:MM
+		// Include time for non-all-day tasks
+		const hours = String(date.getHours()).padStart(2, '0');
+		const minutes = String(date.getMinutes()).padStart(2, '0');
+
+		return `${year}-${month}-${day}T${hours}:${minutes}`; // Date + time: YYYY-MM-DDTHH:MM
 	}
 
 	private parseDateFromFrontmatter(dateStr: string): string {

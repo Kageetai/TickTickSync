@@ -950,6 +950,16 @@ export class SyncMan {
 
 			//TODO: Filtering deleted tasks would take an act of congress. Just warn the user in Readme.
 
+			// In TaskNotes mode, get the set of task IDs that already have TaskNote files
+			// These should always sync regardless of tag/project filters
+			const indexedTaskIds = new Set<string>();
+			if (getSettings().enableTaskNotes) {
+				const taskFileIndex = getSettings().taskFileIndex;
+				for (const tickTickId of Object.keys(taskFileIndex)) {
+					indexedTaskIds.add(tickTickId);
+				}
+			}
+
 			let syncTag: string = getSettings().SyncTag;
 			if (syncTag) {
 				//TODO: In the fullness of time we need to look at Tag Labels not Tag Names.
@@ -967,16 +977,14 @@ export class SyncMan {
 
 				// AND selected. They want only tasks with the tag in the project.
 				if (AndOrIndicator == 1) {
-					let tasksWithTag;
-					tasksWithTag = tasksFromTickTic.filter(task => {
-						tasksWithTag = task.tags?.includes(syncTag); //because TickTick only stores lowercase tags.
-						return tasksWithTag;
+					tasksFromTickTic = tasksFromTickTic.filter(task => {
+						// Always include tasks with existing TaskNote files
+						if (indexedTaskIds.has(task.id)) return true;
+						// Otherwise require both tag AND project
+						const hasTag = task.tags?.includes(syncTag);
+						const hasProjectId = task.projectId === getSettings().SyncProject;
+						return hasTag && hasProjectId;
 					});
-					if (tasksWithTag) {
-						tasksFromTickTic = tasksWithTag.filter(task => {
-							return task.projectId === getSettings().SyncProject;
-						});
-					}
 				} else {
 					//OR they want tasks with either the tag or the project
 					let tasksWithTag = tasksFromTickTic.filter(task => {
@@ -985,8 +993,12 @@ export class SyncMan {
 					let tasksInProject = tasksFromTickTic.filter(task => {
 						return task.projectId === getSettings().SyncProject;
 					});
+					// Also include tasks with existing TaskNote files
+					let tasksWithFiles = tasksFromTickTic.filter(task => {
+						return indexedTaskIds.has(task.id);
+					});
 
-					tasksFromTickTic = [...tasksWithTag, ...tasksInProject].reduce((acc, current) => {
+					tasksFromTickTic = [...tasksWithTag, ...tasksInProject, ...tasksWithFiles].reduce((acc, current) => {
 						const existing = acc.find(item => item.id === current.id);
 						if (existing) {
 							Object.assign(existing, current);
@@ -1001,6 +1013,8 @@ export class SyncMan {
 				//Will process whichever one is present.
 				if (syncTag || getSettings().SyncProject) {
 					tasksFromTickTic = tasksFromTickTic.filter(task => {
+						// Always include tasks with existing TaskNote files
+						if (indexedTaskIds.has(task.id)) return true;
 						const hasTag = task.tags?.includes(syncTag);
 						const hasProjectId = task.projectId === getSettings().SyncProject;
 						return hasTag || hasProjectId;

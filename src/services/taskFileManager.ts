@@ -108,14 +108,17 @@ export class TaskFileManager {
 
 		try {
 			const file = await this.findTaskFileById(taskId);
+
+			// Remove from index BEFORE trashing the file
+			// This prevents the vault's on('delete') event handler from showing
+			// a duplicate deletion modal (since it won't find the task in the index)
+			this.removeFromFileIndex(taskId);
+
 			if (file) {
 				// Move to trash instead of permanent delete
 				await this.app.vault.trash(file, false);
 				log.debug(`Deleted task file: ${file.path}`);
 			}
-
-			// Remove from index
-			this.removeFromFileIndex(taskId);
 		} catch (error) {
 			log.error(`Failed to delete task file for ${taskId}:`, error);
 		}
